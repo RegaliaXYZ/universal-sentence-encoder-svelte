@@ -1,38 +1,19 @@
-# create-svelte
+Intent Classification using Universal Sentence Encoder
+Welcome to the Intent Matcher website! This web application utilizes TensorFlow.js in the browser, vectorizes inputs, and employs cosine similarity to identify the intent that corresponds to a given sentence. The project is built with SvelteKit for the frontend, Tailwind CSS for styling, and TensorFlow.js for the machine learning aspect.
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+Features
 
-## Creating a project
+1. Intent Matching with TensorFlow.js in browser
+   The project leverages the power of TensorFlow.js, allowing you to perform intent matching directly in your browser. TensorFlow.js enables efficient machine learning operations, making the intent matching process seamless and quick.
+   The model used for that is "Universal Sentence Encoder" which is a model that encodes text into high-dimensional vectors that can be used for text classification, semantic similarity, clustering and other natural language tasks.
 
-If you're seeing this, you've probably already done this step. Congrats!
+2. Cosine Similarity Calculation
+   We use cosine similarity to determine how closely a given input sentence aligns with predefined intents. Cosine similarity measures the cosine of the angle between two vectors, providing a reliable metric for similarity. This technique enhances the accuracy of intent classification.
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+Technologies used
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+1. SvelteKit Framework
+   The frontend of the Intent Matcher website is built with SvelteKit, a powerful and user-friendly framework for building web applications. SvelteKit's declarative syntax and efficient updates make it an excellent choice for creating dynamic and responsive user interfaces.
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+2. Tailwind CSS Styling
+   Tailwind CSS is employed for styling the website, ensuring a clean and visually appealing user interface. Tailwind CSS provides utility-first classes, making it easy to design and customize the appearance of the application.
