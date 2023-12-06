@@ -1,9 +1,15 @@
 <script lang="ts">
+	// Imports for Tensorflow related stuff
 	import * as use from '@tensorflow-models/universal-sentence-encoder';
 	import * as tf from '@tensorflow/tfjs';
-
 	import type { Tensor2D } from '@tensorflow/tfjs-core';
-	import Icon from '@iconify/svelte';
+
+	// Imports from Svelte Material UI
+	import Button from '@smui/button';
+	import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
+
+	// Card component
+	import Card from '$lib/components/card.svelte';
 
 	let name = '';
 	type Card = {
@@ -26,7 +32,7 @@
 				name = '';
 				cards = cards.slice();
 			} else {
-				alert('Card already exists');
+				alert('Intent already exists with this name');
 			}
 			// reset the name
 			name = '';
@@ -52,34 +58,42 @@
 	}
 
 	function vectorizeInputs() {
-		console.log('Vectorizing');
-		console.log(cards);
-		use
-			.load()
-			.then(async (model) => {
-				// Embed an array of sentences.
-				for (let i = 0; i < cards.length; i++) {
-					const card = cards[i];
-					const sentences = card.sentences.split('\n');
-					const start = performance.now();
-					const embeddings = await model.embed(sentences);
-					embeddingMap[i] = embeddings;
-					embeddingTimes[i] = performance.now() - start;
+		use.load().then(async (model) => {
+			// Embed an array of sentences.
+			let total = 0;
+			const start = performance.now();
+			for (let i = 0; i < cards.length; i++) {
+				const card = cards[i];
+				const sentences = card.sentences.split('\n');
+				// remove all empty sentences
+				for (let i = 0; i < sentences.length; i++) {
+					if (sentences[i] == '') {
+						sentences.splice(i, 1);
+					}
 				}
-			})
-			.finally(() => {
-				console.log(embeddingMap);
-			});
+				total += sentences.length;
+				const embeddings = await model.embed(sentences);
+				embeddingMap[i] = embeddings;
+				embeddingTimes[i] = performance.now() - start;
+			}
+			console.log('Embedded %s sentences in %s ms', total, performance.now() - start);
+		});
 	}
 
 	async function vectorizeTests() {
-		console.log('output');
-		console.log(outputs);
 		const sentences = outputs.split('\n');
+		// remove all empty sentences
+		for (let i = 0; i < sentences.length; i++) {
+			if (sentences[i] == '') {
+				sentences.splice(i, 1);
+			}
+		}
 		let model = await use.load();
 		for (let i = 0; i < sentences.length; i++) {
 			const sentence = sentences[i];
+			const start = performance.now();
 			const embedding = await model.embed([sentence]);
+			embeddingTimes[i] = performance.now() - start;
 			let maxSimilarity = 0;
 			let maxIndex = 0;
 			for (let j = 0; j < embeddingMap.length; j++) {
@@ -91,7 +105,8 @@
 				}
 			}
 			outputsIntents[i] = cards[maxIndex].name;
-			console.log(sentence, cards[maxIndex].name);
+			outputsIntents = outputsIntents.slice();
+			embeddingTimes = embeddingTimes.slice();
 		}
 	}
 </script>
@@ -106,121 +121,76 @@
 				bind:value={name}
 				on:input={() => {}}
 				on:keypress={handleKeyPress}
-				placeholder="Enter name"
+				placeholder="Enter Intent Name"
 			/>
-		{/if}
-		{#if embeddingMap.length > 0}
-			<textarea
-				class="border border-gray-300 p-2 w-full"
-				rows="4"
-				placeholder="Enter sentences"
-				bind:value={outputs}
-			/>
-			<button class="btn btn-primary" on:click={() => vectorizeTests()}> Vectorize </button>
-			<button
-				class="btn btn-primary"
-				on:click={() => {
-					outputs = '';
-					outputsIntents = [];
-					embeddingMap = [];
-					cards = [];
-				}}
+			<Button disabled={cards.length < 2} variant="raised" on:click={() => vectorizeInputs()}
+				>Vectorize</Button
 			>
-				Clear
-			</button>
+		{/if}
+
+		{#if embeddingMap.length > 0}
+			<div class="flex flex-col">
+				<div class="flex flex-row p-2 m-4">
+					<Button variant="raised" disabled={outputs.length == 0} on:click={() => vectorizeTests()}
+						>Vectorize</Button
+					>
+					<Button
+						on:click={() => {
+							outputs = '';
+							outputsIntents = [];
+							embeddingMap = [];
+							cards = [];
+						}}
+						variant="raised"
+					>
+						Clear
+					</Button>
+				</div>
+				<div>
+					<textarea
+						class="border border-gray-300 p-2 w-full"
+						rows="4"
+						placeholder="Enter sentences to tag"
+						bind:value={outputs}
+					/>
+				</div>
+			</div>
 		{/if}
 	</div>
 
-	{#if cards.length > 0 && embeddingMap.length == 0}
-		<div class="card-list mt-4">
+	{#if cards.length > 0 && embeddingMap.length == 0 && outputsIntents.length == 0}
+		<div class="flex flex-col w-full">
 			{#each cards as card, index (card.name)}
-				<div class="card">
-					<div class="card-title">
-						<p>
-							{card.name}
-						</p>
-						<button class="remove-icon" on:click={() => removeCard(card.name)}>
-							<Icon icon="mdi:delete" />
-						</button>
-					</div>
-					<textarea
-						class="textarea"
-						rows="4"
-						placeholder="Card content..."
-						bind:value={card.sentences}
-					></textarea>
-				</div>
+				<Card
+					bind:c_sentences={cards[index].sentences}
+					bind:c_name={cards[index].name}
+					{removeCard}
+				/>
 			{/each}
 		</div>
 	{/if}
 
-	{#if cards.length >= 2 && embeddingMap.length == 0}
-		<div class="flex justify-center mt-4">
-			<button class="btn btn-primary" on:click={() => vectorizeInputs()}> Vectorize </button>
-		</div>
-	{/if}
-
 	{#if outputsIntents.length > 0}
-		<table>
-			<thead>
-				<tr>
-					<th>Input</th>
-					<th>Output</th>
-					<th>Time</th>
-				</tr>
-			</thead>
-			<tbody>
+		<DataTable table$aria-label="Outputs list">
+			<Head>
+				<Row>
+					<Cell>Input</Cell>
+					<Cell>Output</Cell>
+					<Cell>Time (ms)</Cell>
+				</Row>
+			</Head>
+			<Body>
 				{#each outputsIntents as output, index}
-					<tr>
-						<td>{outputs.split('\n')[index]}</td>
-						<td>{output}</td>
-						<td>{embeddingTimes[index].toFixed(4)}</td>
-					</tr>
+					<Row>
+						<Cell>{outputs.split('\n')[index]}</Cell>
+						<Cell>{output}</Cell>
+						<Cell>{embeddingTimes[index].toFixed(2)}</Cell>
+					</Row>
 				{/each}
-			</tbody>
-		</table>
+			</Body>
+		</DataTable>
 	{/if}
 </div>
 
 <style lang="postcss">
-	:global(html) {
-		background-color: theme(colors.blue.400);
-	}
-	.card-list {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 1rem; /* Adjust the gap between cards as needed */
-		width: 100%;
-	}
-
-	.card {
-		display: flex;
-		flex-direction: column;
-		border: 2px solid #fff; /* White border */
-		padding: 1rem;
-		max-width: 800px;
-		margin: 0 auto;
-	}
-
-	.card-title {
-		justify-content: space-evenly;
-		display: flex;
-		flex-direction: row;
-		text-align: center;
-		font-size: 1.2rem;
-		font-weight: bold;
-		margin-bottom: 0.5rem;
-	}
-
-	.remove-icon {
-		color: #e53e3e; /* Tailwind red-500 */
-		cursor: pointer;
-		font-size: 1.5rem;
-	}
-
-	.textarea {
-		width: 100%;
-		margin-top: 1rem;
-	}
 </style>
